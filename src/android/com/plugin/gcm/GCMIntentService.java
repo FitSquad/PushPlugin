@@ -1,5 +1,8 @@
 package com.plugin.gcm;
 
+import java.util.ArrayList;
+
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -83,6 +86,7 @@ public class GCMIntentService extends GCMBaseIntentService {
 	{
 		NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 		String appName = getAppName(this);
+    extras.putString("appName", appName);
 
 		Intent notificationIntent = new Intent(this, PushHandlerActivity.class);
 		notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -108,6 +112,12 @@ public class GCMIntentService extends GCMBaseIntentService {
 				.setContentIntent(contentIntent)
 				.setAutoCancel(true);
 
+    try {
+      addActions(mBuilder, extras);
+    } catch(JSONException e) {
+      Log.e(TAG, "JSON exception while parsing actions: " + e.getMessage());
+    }
+
 		String message = extras.getString("message");
 		if (message != null) {
 			mBuilder.setContentText(message);
@@ -120,17 +130,7 @@ public class GCMIntentService extends GCMBaseIntentService {
 			mBuilder.setNumber(Integer.parseInt(msgcnt));
 		}
 		
-		int notId = 0;
-		
-		try {
-			notId = Integer.parseInt(extras.getString("notId"));
-		}
-		catch(NumberFormatException e) {
-			Log.e(TAG, "Number format exception - Error parsing Notification ID: " + e.getMessage());
-		}
-		catch(Exception e) {
-			Log.e(TAG, "Number format exception - Error parsing Notification ID" + e.getMessage());
-		}
+		int notId = PushPlugin.getNotIdFromExtras(extras);
 		
 		mNotificationManager.notify((String) appName, notId, mBuilder.build());
 	}
@@ -149,5 +149,30 @@ public class GCMIntentService extends GCMBaseIntentService {
 	public void onError(Context context, String errorId) {
 		Log.e(TAG, "onError - errorId: " + errorId);
 	}
+
+  private void addActions(NotificationCompat.Builder mBuilder, Bundle extras) throws JSONException {
+    String actionsString = extras.getString("actions");
+
+    if (actionsString != null) {
+      JSONArray actions = new JSONArray(actionsString);
+      int actionsCount = actions.length();
+      for (int i = 0; i < actionsCount; i++) {
+        JSONObject actionBundle = actions.getJSONObject(i);
+
+        int icon = actionBundle.getInt("icon");
+        String title = actionBundle.getString("title");
+        String action = actionBundle.getString("action");
+
+        Intent actionIntent = new Intent(this, PushHandlerActivity.class);
+        actionIntent.setAction(action);
+    		actionIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+    		actionIntent.putExtra("pushBundle", extras);
+
+    		PendingIntent actionPendingIntent = PendingIntent.getActivity(this, 0, actionIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        mBuilder.addAction(icon, title, actionPendingIntent);
+      }
+    }
+  }
 
 }

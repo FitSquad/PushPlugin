@@ -40,15 +40,27 @@ public class PushHandlerActivity extends Activity
 	 */
 	private void processPushBundle(boolean isPushPluginActive)
 	{
-		Bundle extras = getIntent().getExtras();
+    Intent intent = getIntent();
+		Bundle extras = intent.getExtras();
+    String action = intent.getAction();
 
 		if (extras != null)	{
 			Bundle originalExtras = extras.getBundle("pushBundle");
-            
-            originalExtras.putBoolean("foreground", false);
-            originalExtras.putBoolean("coldstart", !isPushPluginActive);
+      String appName = originalExtras.getString("appName");
+      int notId = PushPlugin.getNotIdFromExtras(originalExtras);
+
+      originalExtras.putBoolean("foreground", false);
+      originalExtras.putBoolean("coldstart", !isPushPluginActive);
+      if (action != null) {
+        originalExtras.putString("action", action);
+      }
 
 			PushPlugin.sendExtras(originalExtras);
+
+      if (notId > 0 && appName != null) {
+        final NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.cancel(appName, notId);
+      }
 		}
 	}
 
