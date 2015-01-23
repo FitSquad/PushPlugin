@@ -57,7 +57,7 @@ public class PushHandlerActivity extends Activity
 
 			PushPlugin.sendExtras(originalExtras);
 
-      if (notId > 0 && appName != null) {
+      if (notId != 0 && appName != null) {
         final NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.cancel(appName, notId);
       }
